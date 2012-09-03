@@ -1,0 +1,4 @@
+[scale=0.8]
+\psfrag{BER}[cc][cc]{BER}
+\psfrag{"Interference Alignment" for the SVD case}{"Alinhamento de Interferência" para o caso da SVD}
+\psfrag{Eb/N0}{$Eb/N_{0}$}
