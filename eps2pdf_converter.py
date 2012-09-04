@@ -195,7 +195,6 @@ if __name__ == '__main__':
         sys.exit(1)
 
     fileName = sys.argv[1]
-
     if (len(sys.argv) < 3):
         repsFile = fileName + ".psfrags"
     else:
