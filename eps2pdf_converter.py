@@ -154,9 +154,9 @@ def psfrag_replace(figureFullName, psfrags, includegraphics_options=""):
         os.system(shell_command_remove_temporary_files)
         return exit_code
     else:
-        # Remove the epsfrag2pdf.* files if it they were left by a previous
+        # Remove the epsfrag2pdf.tex files if it they were left by a previous
         # unsuccessful compilation.
-        os.system("rm -f epsfrag2pdf.*")
+        os.system("rm -f epsfrag2pdf.tex")
 
     # If latex processing was ok we just need to convert to ps and then to
     # pdf (as well as removing the temporary files)
