@@ -4,19 +4,68 @@
 """The main function in this module is the psfrag_replace function, which
 is where the actual job is done.
 
+ * Executing the module
+
 When this module is executed as a script, it will receive an argument,
-which is the name of the eps file without the extension. A file with the
+which is the NAME of the eps file without the extension. A file with the
 same name, but with extensions 'psfrags' is expected. This file should have
 all the psfrag text that you would normally use in latex. For instance
     \psfrag{Something}[cc][cc]{replacement}
     \psfrag{Original text}{Replaced text}
 
-Alternatively, the first line in this file may contain options (inside
-brackets) to be passed to the includegraphics command. For instance,
+ * Passing Options to the includegraphics command
+
+The first line in the NAME.psfrags file may contain options (inside brackets)
+to be passed to the includegraphics command. For instance,
     [width=\textwidth]
+
+ * Including Extra packages
+
+If you need to use commands in the psfrag replacements that require extra
+latex packages, then create a file called 'extra_latex_packages.tex' or
+'NAME_extra_packages.tex' (the later will take precedence on the former if
+both exist) and put the '\usepackage{some package}' lines there.
 """
+#TODO: Implement the extra packages functionality
+
 
 import os
+
+
+def get_extra_packages(name):
+    """Try to get the extra latex packages from the file
+    'extra_latex_packages.tex' or the file 'NAME_extra_packages.tex'.
+
+    Return a string containing all the usepackage commands in one of these
+    files. If none of the files exist, return an empty string.
+
+    Arguments:
+    - `name`: Name of the .eps file without the extension.
+    """
+    extra_packages = ""
+
+    # If the file extra_latex_packages.tex exists, then extra_packages will
+    # get its content
+    try:
+        fId = open('extra_latex_packages.tex')
+        extra_packages = fId.read()
+        fId.close()
+    except IOError:
+        # File extra_latex_packages.tex does not exist
+        pass
+
+    # If the file NAME_latex_packages.tex exists, then extra_packages will
+    # get its content (overwriting previous content)
+    try:
+        filename = '{0}_extra_packages.tex'.format(name)
+        fId = open(filename)
+        extra_packages = fId.read()
+        fId.close()
+    except IOError:
+        # File NAME_extra_packages.tex does not exist
+        pass
+
+    return extra_packages
 
 
 def prepareLatexCode(figureName, psfrags, includegraphics_options=""):
@@ -56,6 +105,7 @@ def prepareLatexCode(figureName, psfrags, includegraphics_options=""):
 \\usepackage{{graphicx,psfrag,color}}
 \\usepackage[english]{{babel}}
 \\usepackage[utf8]{{inputenc}}
+{EXTRAPACKAGES}
 \\setlength{{\\topmargin}}{{-1in}}
 \\setlength{{\\headheight}}{{0pt}}
 \\setlength{{\\headsep}}{{0pt}}
@@ -85,7 +135,8 @@ def prepareLatexCode(figureName, psfrags, includegraphics_options=""):
 
     all_replacements = {"PSFRAG": psfrag_replacements,
                         "FILENAME": figureName,
-                        "INCLUDEGRAPHICS_OPTIONS": includegraphics_options}
+                        "INCLUDEGRAPHICS_OPTIONS": includegraphics_options,
+                        "EXTRAPACKAGES": get_extra_packages(figureName)}
     #IPython.embed()
     latex_code = latex_code.format(**all_replacements)
     return latex_code
@@ -154,9 +205,9 @@ def psfrag_replace(figureFullName, psfrags, includegraphics_options=""):
         os.system(shell_command_remove_temporary_files)
         return exit_code
     else:
-        # Remove the epsfrag2pdf.tex files if it they were left by a previous
-        # unsuccessful compilation.
-        os.system("rm -f epsfrag2pdf.tex")
+        # Remove the epsfrag2pdf.* files (except epsfrag2pdf.py) if it they
+        # were left by a previous unsuccessful compilation.
+        os.system("rm -f epsfrag2pdf.*[!py]")
 
     # If latex processing was ok we just need to convert to ps and then to
     # pdf (as well as removing the temporary files)
@@ -179,6 +230,9 @@ def print_help():
        - psfragsFileName is the name of a file containing the psfrag replacements."""
     print(help)
 # xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+if __name__ == '__main__1':
+    print ("Extra packages:\n{0}".format(get_extra_packages('nome')))
 
 if __name__ == '__main__1':
     fileName = "test.psfrags"
