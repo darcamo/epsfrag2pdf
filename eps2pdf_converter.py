@@ -39,8 +39,10 @@ def get_extra_packages(name):
     Return a string containing all the usepackage commands in one of these
     files. If none of the files exist, return an empty string.
 
-    Arguments:
-    - `name`: Name of the .eps file without the extension.
+    Parameters
+    ----------
+    name : str
+        Name of the eps file without the ".eps" extension.
     """
     extra_packages = ""
 
@@ -69,31 +71,30 @@ def get_extra_packages(name):
 
 
 def prepareLatexCode(figureName, psfrags, includegraphics_options=""):
-    """Prepare the latex code used in the eps2pdf conversion.
+    """
+    Prepare the latex code used in the eps2pdf conversion.
 
-    Arguments:
-    `figureName`:
-      Nome do arquivo eps (sem extensao).
+    Parameters
+    ----------
+    figureName : str
+        Name of the eps file (without extension)
+    psfrags : string or a list of strings
 
-    `psfrags`:
-      Substituicoes do psfrag. Pode ser uma string contendo os comandos do
-      psfrag ou uma lista.
-
-      Caso seja uma lista, cada elemento da lista deve deve ser uma lista
-      com 3 elementos onde o primeiro elemento e o texto original, o
-      segundo elemento e a substituicao e o terceiro elemento sao
-      parametros para o psfrag (por exemplo, "[cc][cc]" - sem aspas).
-      Ex:
-      [['BER', 'BER', '[cc][cc]']
-       ['\\"Interference Alignment\\" for the SVD case', 'Title', '']
-       ['Eb/N0', '$Eb/N_0$', '']]
-      Caso
-
-    `includegraphics_options`:
-      Options that should be passed to the includegraphics package
-      (INCLUDING THE BRACKETS).
-      Ex:
-      [width=\textwidth]
+        psfrag replacements. It can be either a string with the psfrag
+        commands or a list. If it is a list, each element in the list must
+        be a list with 3 elements. The first element is the original text,
+        the second element is the replacement text and the third element
+        has the parameters to be passed to psfrag command (Ex: "[cc][cc]" -
+        without the quotes).
+        Ex:
+        [['BER', 'BER', '[cc][cc]']
+         ['Title', '\\"Interference Alignment\\" for the SVD case', '']
+         ['Eb/N0', '$Eb/N_0$', '']]
+    includegraphics_options : str
+        Options that should be passed to the includegraphics package
+        (INCLUDING THE BRACKETS).
+        Ex:
+        [width=\textwidth]
     """
     if(isinstance(psfrags, list)):
         psfrag_replacements = psfragListToString(psfrags)
@@ -116,19 +117,19 @@ def prepareLatexCode(figureName, psfrags, includegraphics_options=""):
 \\setlength{{\\textwidth}}{{\\paperwidth}}
 \\setlength{{\\parindent}}{{0pt}}
 \\usepackage{{tikz}}
-\\special{{! TeXDict begin /landplus90{{true}}store end }}
+%%\\special{{! TeXDict begin /landplus90{{true}}store end }}
 %%\\special{{! statusdict /setpage undef }}
 %%\\special{{! statusdict /setpageparams undef }}
 \\pagestyle{{empty}}
-\\newsavebox{{\\pict}}
+%%\\newsavebox{{\\pict}}
 
 \\begin{{document}}
-\\begin{{lrbox}}{{\\pict}}
+%%\\begin{{lrbox}}{{\\pict}}
 {PSFRAG}
 \\includegraphics{INCLUDEGRAPHICS_OPTIONS}{{{FILENAME}}}
-\\end{{lrbox}}
-\\special{{papersize=\\the\\wd\\pict,\\the\\ht\\pict}}
-\\usebox{{\\pict}}
+%%\\end{{lrbox}}
+%%\\special{{papersize=\\the\\wd\\pict,\\the\\ht\\pict}}
+%%\\usebox{{\\pict}}
 \\end{{document}}"""
     if includegraphics_options == "":
         includegraphics_options = "[scale=1]"
@@ -149,12 +150,16 @@ def psfragListToString(psfragList):
 
     As an example, suppose we have the list bellow
     : [['BER', 'BER', '[cc][cc]']
-    :  ['\\"Interference Alignment\\" for the SVD case', 'Title', '']
+    :  ['Title', '\\"Interference Alignment\\" for the SVD case', '']
     :  ['Eb/N0', '$Eb/N_0$', '']]
     It will be converted to
     : \psfrag{BER}[cc][cc]{BER}
-    : \psfrag{\"Interference Alignment\" for the SVD case}{Title}
+    : \psfrag{Title}{\"Interference Alignment\" for the SVD case}
     : \psfrag{Eb/N0}{$Eb/N_{0}$}
+
+    Parameters
+    ----------
+    psfragList : list of strings
     """
     psfragText = ""
     for i in psfragList:
@@ -162,19 +167,54 @@ def psfragListToString(psfragList):
     return psfragText.strip()
 
 
-def psfrag_replace(figureFullName, psfrags, includegraphics_options=""):
-    """Efetua as subistituioes do psfrag em um arquivo eps.
+def crop_pdf(filename):
+    """Call the pdfcrop program to crop a PDF file.
 
-    figureFullName:
-      Nome do arquivo eps (sem extensao).
-    psfrags:
-      Lista contendo as substituicoes do psfrag. Cada elemento deve
-      ser uma lista com 3 elementos onde o primeiro elemento e o texto
-      original, o segundo elemento e a substituicao e o terceiro elemento
-      sao parametros para o psfrag (por exemplo, "[cc][cc]" - sem aspas).
-    includegraphics_options: Options that should be passed to the
-                             includegraphics package (INCLUDING THE
-                             BRACKETS)
+    Parameters
+    ----------
+    filename : str
+        The name of the PDF file (with the extension).
+    """
+    import os
+    basename, extension = os.path.splitext(filename)
+    aux_filename = ''.join([basename, '_aux', extension])
+
+    # If the extension was not provided, assume .pdf
+    if extension == '':
+        extension = '.pdf'
+        filename = ''.join([filename, extension])
+
+    # Rename the file so that the output of pdfcrop later can have the
+    # original name
+    os.rename(filename, aux_filename)
+
+    # Crop the PDF file
+    SHELL_COMMAND_CROP_PDF_FILE = "pdfcrop {0} {1} > \\dev\\null".format(aux_filename, filename)
+    os.system(SHELL_COMMAND_CROP_PDF_FILE)
+    os.remove(aux_filename)
+
+
+def psfrag_replace(figureFullName, psfrags, includegraphics_options=""):
+    """
+    Perform the psfrag replacements in an eps file.
+
+    Parameters
+    ----------
+    figureFullName : str
+        Nome do arquivo eps (sem extensao).
+    psfrags : list of strings
+        List with the psfrag replacements. Each element must be a list with
+        3 elements, where the first element is the original text to be
+        replaced, the second element is the text replacement and the third
+        element has the parameters to be passed to the pasfrag command (Ex:
+        "[cc][cc]" - without the quotes).
+        Ex:
+        [['BER', 'BER', '[cc][cc]']
+         ['Title', '\\"Interference Alignment\\" for the SVD case', '']
+         ['Eb/N0', '$Eb/N_0$', '']]
+    includegraphics_options : str
+        Options that should be passed to the includegraphics package
+        (INCLUDING THE BRACKETS).
     """
     (directory, filename) = os.path.split(figureFullName)
     # If the file name is a full path, change current working directory to
@@ -217,17 +257,25 @@ def psfrag_replace(figureFullName, psfrags, includegraphics_options=""):
     if exit_code != 0:
         os.system("mv psfrag_replace.tex epsfrag2pdf.tex")
         print("The dvips of the ps2pdf command could not be performed by some reason. Compile the file epsfrag2pdf.tex manually to get some clue about the problem.")
+    else:
+        # If the PDF file was successfully generated, all we need to do now
+        # is to crop it to remove the whitespace.
+        crop_pdf(filename)
 
     print("dvips or ps2pdf exit code: {0}".format(exit_code))
     print ("xxxxxxxxxx REMOVING TEMPORARY FILES xxxxxxxxxxxxxxxxxxxxxxxx")
     os.system(shell_command_remove_temporary_files)
+
     return exit_code
 
 
 def print_help():
     help = """Usage: eps2pdf_converter fileName psfragsFileName
        - filename is the name of the eps file (without extension)
-       - psfragsFileName is the name of a file containing the psfrag replacements."""
+       - psfragsFileName is the name of a file containing the psfrag
+         replacements. If not provided, the name 'fileName.psfrags' will be
+         used"""
+
     print(help)
 # xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
