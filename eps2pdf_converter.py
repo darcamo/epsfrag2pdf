@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+
 """The main function in this module is the psfrag_replace function, which
 is where the actual job is done.
 
@@ -26,10 +27,9 @@ latex packages, then create a file called 'extra_latex_packages.tex' or
 'NAME_extra_packages.tex' (the later will take precedence on the former if
 both exist) and put the '\usepackage{some package}' lines there.
 """
-#TODO: Implement the extra packages functionality
-
 
 import os
+from subprocess import call
 
 
 def get_extra_packages(name):
@@ -191,8 +191,9 @@ def crop_pdf(filename):
     os.rename(filename, aux_filename)
 
     # Crop the PDF file
-    SHELL_COMMAND_CROP_PDF_FILE = "pdfcrop {0} {1} > /dev/null".format(aux_filename, filename)
-    os.system(SHELL_COMMAND_CROP_PDF_FILE)
+    SHELL_COMMAND_CROP_PDF_FILE = r"pdfcrop {0} {1} > /dev/null".format(aux_filename, filename)
+
+    exit_code = call(SHELL_COMMAND_CROP_PDF_FILE, shell=True)
     os.remove(aux_filename)
 
 
@@ -242,28 +243,39 @@ def psfrag_replace(figureFullName, psfrags, includegraphics_options="", crop=Tru
     shell_command_latex = "latex -halt-on-error -interaction=batchmode {0} > /dev/null".format(tex_fileName)
     # Option '-q' in dvips is for the quiet mode
     shell_command_dvi_to_pdf = "dvips -q {0} && ps2pdf {1} {2}.pdf".format(dvi_fileName, ps_fileName, filename)
-    shell_command_remove_temporary_files = "rm -f {0}.* {0}_debug.*".format(fileName)
+
+    # Called to remove the generated temporary (latex related) files.
+    shell_command_remove_temporary_files = "rm -f {0}.*".format(fileName)
+
+    # Called to remove the generated debug (latex related) files after a
+    # successful compilation.
+    shell_command_remove_debug_files = "rm -f {0}_debug.*".format(fileName)
 
     print ("xxxxxxxxxx RUNNING LATEX xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
-    exit_code = os.system(shell_command_latex)
+    exit_code = call(shell_command_latex, shell=True)
     print("Latex exit code is: {0}".format(exit_code))
     if(exit_code != 0):  # Latex file could not be processed
-        os.system("mv {0} {1}".format(tex_fileName, tex_fileName_debug))
+        os.rename(tex_fileName, tex_fileName_debug)
         print("The tex file could not be compiled. Compile the file {0} manually to get some clue about the problem.".format(tex_fileName_debug))
-        os.system(shell_command_remove_temporary_files)
+
+        # Remove temporary files
+        call(shell_command_remove_temporary_files, shell=True)
         return exit_code
     else:
-        # Remove the epsfrag2pdf.* files (except epsfrag2pdf.py) if it they
-        # were left by a previous unsuccessful compilation.
-        os.system("rm -f epsfrag2pdf.*[!py]")
+        # Remove debug files (from a possibly unsuccessful compilation)
+        call(shell_command_remove_debug_files, shell=True)
+
+        # # Remove the epsfrag2pdf.* files (except epsfrag2pdf.py) if it they
+        # # were left by a previous unsuccessful compilation.
+        # call("rm -f epsfrag2pdf.*[!py]", shell=True)
 
     # If latex processing was ok we just need to convert to ps and then to
     # pdf (as well as removing the temporary files)
     print ("xxxxxxxxxx RUNNING DVIPS AND PS2PDF xxxxxxxxxxxxxxxxxxxxxxxx")
-    exit_code = os.system(shell_command_dvi_to_pdf)
+    dvi_to_pdf_exit_code = call(shell_command_dvi_to_pdf, shell=True)
 
-    if exit_code != 0:
-        os.system("mv {0} {1}".format(tex_fileName, tex_fileName_debug))
+    if dvi_to_pdf_exit_code != 0:
+        os.rename(tex_fileName, tex_fileName_debug)
         print("The dvips of the ps2pdf command could not be performed by some reason. Compile the file {0} manually to get some clue about the problem.".format(tex_fileName_debug))
     else:
         # If the PDF file was successfully generated all we need to do now
@@ -272,11 +284,12 @@ def psfrag_replace(figureFullName, psfrags, includegraphics_options="", crop=Tru
         if crop is True:
             crop_pdf(filename)
 
-    print("dvips or ps2pdf exit code: {0}".format(exit_code))
+    print("dvips or ps2pdf exit code: {0}".format(dvi_to_pdf_exit_code))
     print ("xxxxxxxxxx REMOVING TEMPORARY FILES xxxxxxxxxxxxxxxxxxxxxxxx")
-    os.system(shell_command_remove_temporary_files)
+    rm_exit_code = call(shell_command_remove_temporary_files, shell=True)
+    print("Remove files exit code: {0}".format(rm_exit_code))
 
-    return exit_code
+    return dvi_to_pdf_exit_code
 
 
 def print_help():
