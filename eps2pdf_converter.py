@@ -109,13 +109,13 @@ def prepareLatexCode(figureName, psfrags, includegraphics_options=""):
 \\usepackage[english]{{babel}}
 \\usepackage[utf8]{{inputenc}}
 {EXTRAPACKAGES}
-\\setlength{{\\topmargin}}{{-1in}}
+\\setlength{{\\topmargin}}{{0in}}
 \\setlength{{\\headheight}}{{0pt}}
 \\setlength{{\\headsep}}{{0pt}}
 \\setlength{{\\topskip}}{{0pt}}
 \\setlength{{\\textheight}}{{\\paperheight}}
-\\setlength{{\\oddsidemargin}}{{-1in}}
-\\setlength{{\\evensidemargin}}{{-1in}}
+\\setlength{{\\oddsidemargin}}{{0in}}
+\\setlength{{\\evensidemargin}}{{0in}}
 \\setlength{{\\textwidth}}{{\\paperwidth}}
 \\setlength{{\\parindent}}{{0pt}}
 \\usepackage{{tikz}}
@@ -196,7 +196,7 @@ def crop_pdf(filename):
     os.remove(aux_filename)
 
 
-def psfrag_replace(figureFullName, psfrags, includegraphics_options="", crop=False):
+def psfrag_replace(figureFullName, psfrags, includegraphics_options="", crop=True):
     """
     Perform the psfrag replacements in an eps file.
 
@@ -229,23 +229,27 @@ def psfrag_replace(figureFullName, psfrags, includegraphics_options="", crop=Fal
     latex_code = prepareLatexCode(filename, psfrags, includegraphics_options)
 
     # Open file to save latex code
-    fileName = "psfrag_replace.tex"
-    f = open(fileName, 'w')
+    fileName = "{0}_psfrag_replace".format(filename)
+    tex_fileName = "{0}.tex".format(fileName)
+    tex_fileName_debug = "{0}_debug.tex".format(fileName) # This will only be used whem compilation fail
+    dvi_fileName = "{0}.dvi".format(fileName)
+    ps_fileName = "{0}.ps".format(fileName)
+    f = open(tex_fileName, 'w')
     #f.write(latex_code.encode('utf-8'))
     f.write(latex_code)
     f.close()
 
-    shell_command_latex = "latex -halt-on-error -interaction=batchmode psfrag_replace > /dev/null"
+    shell_command_latex = "latex -halt-on-error -interaction=batchmode {0} > /dev/null".format(tex_fileName)
     # Option '-q' in dvips is for the quiet mode
-    shell_command_dvi_to_pdf = "dvips -q psfrag_replace.dvi && ps2pdf psfrag_replace.ps %s.pdf" % filename
-    shell_command_remove_temporary_files = "rm psfrag_replace*"
+    shell_command_dvi_to_pdf = "dvips -q {0} && ps2pdf {1} {2}.pdf".format(dvi_fileName, ps_fileName, filename)
+    shell_command_remove_temporary_files = "rm -f {0}.* {0}_debug.*".format(fileName)
 
     print ("xxxxxxxxxx RUNNING LATEX xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
     exit_code = os.system(shell_command_latex)
     print("Latex exit code is: {0}".format(exit_code))
     if(exit_code != 0):  # Latex file could not be processed
-        os.system("mv psfrag_replace.tex epsfrag2pdf.tex")
-        print("The tex file could not be compiled. Compile the file epsfrag2pdf.tex manually to get some clue about the problem.")
+        os.system("mv {0} {1}".format(tex_fileName, tex_fileName_debug))
+        print("The tex file could not be compiled. Compile the file {0} manually to get some clue about the problem.".format(tex_fileName_debug))
         os.system(shell_command_remove_temporary_files)
         return exit_code
     else:
@@ -259,8 +263,8 @@ def psfrag_replace(figureFullName, psfrags, includegraphics_options="", crop=Fal
     exit_code = os.system(shell_command_dvi_to_pdf)
 
     if exit_code != 0:
-        os.system("mv psfrag_replace.tex epsfrag2pdf.tex")
-        print("The dvips of the ps2pdf command could not be performed by some reason. Compile the file epsfrag2pdf.tex manually to get some clue about the problem.")
+        os.system("mv {0} {1}".format(tex_fileName, tex_fileName_debug))
+        print("The dvips of the ps2pdf command could not be performed by some reason. Compile the file {0} manually to get some clue about the problem.".format(tex_fileName_debug))
     else:
         # If the PDF file was successfully generated all we need to do now
         # is to crop the PDF to remove the whitespace if the 'crop'
