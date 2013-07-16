@@ -74,18 +74,20 @@ def prepareLatexCode(figureName, psfrags, includegraphics_options=""):
     """
     Prepare the latex code used in the eps2pdf conversion.
 
+    This method is charged of creating the template Latex code that will be
+    used to include and process the eps file.
+
     Parameters
     ----------
     figureName : str
         Name of the eps file (without extension)
     psfrags : string or a list of strings
-
-        psfrag replacements. It can be either a string with the psfrag
-        commands or a list. If it is a list, each element in the list must
-        be a list with 3 elements. The first element is the original text,
-        the second element is the replacement text and the third element
-        has the parameters to be passed to psfrag command (Ex: "[cc][cc]" -
-        without the quotes).
+        It can be either a string with the psfrag commands or a list. If it
+        is a list, each element in the list must be a list with 3
+        elements. The first element is the original text, the second
+        element is the replacement text and the third element has the
+        parameters to be passed to psfrag command (Ex: "[cc][cc]" - without
+        the quotes).
         Ex:
         [['BER', 'BER', '[cc][cc]']
          ['Title', '\\"Interference Alignment\\" for the SVD case', '']
@@ -189,12 +191,12 @@ def crop_pdf(filename):
     os.rename(filename, aux_filename)
 
     # Crop the PDF file
-    SHELL_COMMAND_CROP_PDF_FILE = "pdfcrop {0} {1} > \\dev\\null".format(aux_filename, filename)
+    SHELL_COMMAND_CROP_PDF_FILE = "pdfcrop {0} {1} > /dev/null".format(aux_filename, filename)
     os.system(SHELL_COMMAND_CROP_PDF_FILE)
     os.remove(aux_filename)
 
 
-def psfrag_replace(figureFullName, psfrags, includegraphics_options=""):
+def psfrag_replace(figureFullName, psfrags, includegraphics_options="", crop=False):
     """
     Perform the psfrag replacements in an eps file.
 
@@ -215,6 +217,8 @@ def psfrag_replace(figureFullName, psfrags, includegraphics_options=""):
     includegraphics_options : str
         Options that should be passed to the includegraphics package
         (INCLUDING THE BRACKETS).
+    crop : boll
+        If True, the final PDF will be cropped using the pdfcrop program.
     """
     (directory, filename) = os.path.split(figureFullName)
     # If the file name is a full path, change current working directory to
@@ -258,9 +262,11 @@ def psfrag_replace(figureFullName, psfrags, includegraphics_options=""):
         os.system("mv psfrag_replace.tex epsfrag2pdf.tex")
         print("The dvips of the ps2pdf command could not be performed by some reason. Compile the file epsfrag2pdf.tex manually to get some clue about the problem.")
     else:
-        # If the PDF file was successfully generated, all we need to do now
-        # is to crop it to remove the whitespace.
-        crop_pdf(filename)
+        # If the PDF file was successfully generated all we need to do now
+        # is to crop the PDF to remove the whitespace if the 'crop'
+        # argument is True.
+        if crop is True:
+            crop_pdf(filename)
 
     print("dvips or ps2pdf exit code: {0}".format(exit_code))
     print ("xxxxxxxxxx REMOVING TEMPORARY FILES xxxxxxxxxxxxxxxxxxxxxxxx")
