@@ -51,3 +51,6 @@ docs/_build/
 
 # PyBuilder
 target/
+
+# Ignore the test.pdf file
+test.pdf
